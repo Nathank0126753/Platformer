@@ -7,71 +7,74 @@ public class NewBehaviourScript : MonoBehaviour
 {
     private Rigidbody2D rb2d;
     private BoxCollider2D bx2d;
-    private float moveSpeed;
-    private float jumpForce;
-    private bool isJumping;
+    [Range(0, 10f)] [SerializeField] public float moveSpeed = 3f;
+    [Range(0, 100f)] [SerializeField] public float jumpForce = 50f;
+   // private float jumpForce;
+    private bool isJumping = false;
+    private bool isTouchingRight = false;
+    private bool isTouchingLeft = false;
     private float moveHorizontal;
     private float moveVertical;
     private float counterAction;
-    private Color rayColor;
     //private float groundDistance;
-    private RaycastHit2D dist;
-    //private RaycastHit2D shortdist;
-    //private GameObject groundRayObject;
-    // Start is called before the first frame update
+    private Vector3 m_Velocity = Vector3.zero;
+    [Range(0, .3f)] [SerializeField] private float m_MovementSmoothing = .25f;
+    private bool m_FacingRight = true;
     void Start()
     {
-        //lowercase gameObject references this.gameobject
         rb2d = gameObject.GetComponent<Rigidbody2D>();
         bx2d = gameObject.GetComponent<BoxCollider2D>();
-        //groundDistance = 50f;
-        moveSpeed = 3f;
-        jumpForce = 80f;
-        isJumping = false;
         counterAction = 3f;
-        
+
     }
-    // Update is called once per frame
 
     void Update()
     {
-        moveHorizontal = Input.GetAxisRaw("Horizontal"); //are they clicking a/d or left/right can be changed in project settings
-        //if presing a/left, it returns -1, if pressing d/right, it returns 1, otherwise it returns 0
+        moveHorizontal = Input.GetAxisRaw("Horizontal"); 
         moveVertical = Input.GetAxisRaw("Vertical");
-        // Make it move 10 meters per second instead of 10 meters per frame...
-        // Move translation along the object's z-axis
-        // Rotate around our y-axis
-        //transform.Rotate(0, rotation, 0);
-        //float x = Input.GetAxis("Horizontal");
-        //float y = Input.GetAxis("Vertical");
-        //if (Input.GetKeyDown(KeyCode.Space)){
-          //  Debug.Log("saweaweawee" + "x pos: " + x + " y pos: " + y);
-            //transform.position = new Vector3(x+3000, y+3000, 2);
-        //}
     }
     void FixedUpdate(){
-        //invoke("isGrounded", 5.5f);
+        
         isGrounded();
-        //have movement code here bc we need unitys physics to run
-        //instead of 0, getaxisraw technically returns only 1/-1/0, but its just margin of error for more compledx things
+        isTouchingLEFT();
+        isTouchingRIGHT();
         if(moveHorizontal > 0.1f || moveHorizontal < -0.1f){
-            //rb2d.velocity = new Vector2(moveHorizontal*moveSpeed, 0f);//Time.deltaTime, 0f);
-            //normally, you might also multiply Time.Deltatime/Time.fixedDeltaTime, but addforce already does that so no need too
-            rb2d.AddForce(new Vector2(moveHorizontal*moveSpeed, 0f), ForceMode2D.Impulse); //vector 2 is x/y axis, vector 3 is x/y/z axises
+            if (moveHorizontal > 0 && !isTouchingRight)
+			{
+                Vector3 targetVelocity = new Vector2(moveHorizontal * moveSpeed, rb2d.velocity.y);
+			    rb2d.velocity = Vector3.SmoothDamp(rb2d.velocity, targetVelocity, ref m_Velocity, m_MovementSmoothing);
+				if (!m_FacingRight){
+                    Flip();
+                }
+			}
+
+			else if (moveHorizontal < 0 && !isTouchingLeft)
+			{
+                Vector3 targetVelocity = new Vector2(moveHorizontal * moveSpeed, rb2d.velocity.y);
+			    rb2d.velocity = Vector3.SmoothDamp(rb2d.velocity, targetVelocity, ref m_Velocity, m_MovementSmoothing);
+                if (m_FacingRight){
+				    Flip();
+                }
+			}
 
         }
-        //else if (isGrounded()){
-        //    rb2d.AddForce(-rb2d.velocity*counterAction, ForceMode2D.Impulse);
-       // }
+        if(moveHorizontal == 0){
+                Vector3 haltVelocity = new Vector2(0, rb2d.velocity.y);
+			// And then smoothing it out and applying it to the character
+			    rb2d.velocity = Vector3.SmoothDamp(rb2d.velocity, haltVelocity, ref m_Velocity, 0);// m_MovementSmoothing);
+        }
         if (moveVertical > 0.1f && !isJumping){
-            //groundDistance = dist.distance;
-            rb2d.AddForce(new Vector2(0f, moveVertical*jumpForce), ForceMode2D.Impulse);
+            rb2d.AddForce(new Vector2(0f, jumpForce), ForceMode2D.Impulse);//, ForceMode2D.Impulse);
             isJumping = true;
         }
-        //else{
-            //rb2d.AddForce(-rb2d.velocity*counterAction, ForceMode2D.Impulse);
-        //}
     }
+    private void Flip()
+	{
+		m_FacingRight = !m_FacingRight;
+		Vector3 theScale = transform.localScale;
+		theScale.x *= -1;
+		transform.localScale = theScale;
+	}
     void OnTriggerEnter2D(Collider2D collision){
         if (collision.gameObject.tag == "Platform"){
             //isJumping = false;
@@ -83,39 +86,60 @@ public class NewBehaviourScript : MonoBehaviour
         }
     }
     public void isGrounded(){
-        dist = Physics2D.Raycast(transform.position, -Vector2.up);
-        RaycastHit2D Hit1 = Physics2D.Raycast(transform.position + new Vector3(-bx2d.bounds.size.x/2,0f, 0f), -Vector2.up, 0.5f);
-        RaycastHit2D Hit2 = Physics2D.Raycast(transform.position + new Vector3(-0f,0f, 0f), -Vector2.up, 0.5f);
-        RaycastHit2D Hit3 = Physics2D.Raycast(transform.position + new Vector3(+bx2d.bounds.size.x/2,0f, 0f), -Vector2.up, 0.5f);
+        Color rayColor;
+        RaycastHit2D dist = Physics2D.Raycast(bx2d.bounds.center, -Vector2.up);
+        RaycastHit2D Hit1 = Physics2D.Raycast(bx2d.bounds.center + new Vector3(-bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), -Vector2.up, 0.5f);
+        RaycastHit2D Hit2 = Physics2D.Raycast(bx2d.bounds.center + new Vector3(-0f,-bx2d.bounds.size.y/2, 0f), -Vector2.up, 0.5f);
+        RaycastHit2D Hit3 = Physics2D.Raycast(bx2d.bounds.center + new Vector3(+bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), -Vector2.up, 0.5f);
         //shortdist = Physics2D.Raycast(transform.position, -Vector2.up, 0.6f);
         //Debug.Log("groundist " + groundDistance);
         if ((Hit1.collider != null || Hit2.collider != null || Hit3.collider != null)  && rb2d.velocity.y == 0){ //&& shortdist.collider != null){
-            //if (dist.collider !=null){
-            //Debug.Log(dist.distance + " " + dist.collider.name);
             rayColor = Color.green;
-            Debug.DrawRay(transform.position  + new Vector3(-bx2d.bounds.size.x/2,0f, 0f), -Vector2.up*5.0f, rayColor);
-            Debug.DrawRay(transform.position  + new Vector3(0f,0f, 0f), -Vector2.up*5.0f, rayColor);
-            Debug.DrawRay(transform.position  + new Vector3(bx2d.bounds.size.x/2,0f, 0f), -Vector2.up*5.0f, rayColor);
+            Debug.DrawRay(bx2d.bounds.center  + new Vector3(-bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), -Vector2.up*5.0f, rayColor);
+            Debug.DrawRay(bx2d.bounds.center  + new Vector3(0f,-bx2d.bounds.size.y/2, 0f), -Vector2.up*5.0f, rayColor);
+            Debug.DrawRay(bx2d.bounds.center  + new Vector3(bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), -Vector2.up*5.0f, rayColor);
             isJumping = false;
-            //}
-            //else{
-            //    rayColor = Color.red;
-            //    Debug.DrawRay(transform.position, -Vector2.up*Hit.distance, rayColor);
-             //   isJumping = true;
-           // }
         }
-        //return false;
         else{
-            //if (dist.collider != null){
-                //Debug.Log(dist.distance + " " + dist.collider.name);
-            //}
             isJumping = true;
             rayColor = Color.red;
-            Debug.DrawRay(transform.position, -Vector2.up*dist.distance, rayColor); //transform.position + -transform.up, rayColor);
+            Debug.DrawRay(bx2d.bounds.center + new Vector3(0f, -bx2d.bounds.size.y/2, 0f), -Vector2.up*dist.distance, rayColor); //transform.position + -transform.up, rayColor);
             
         }
-        
-        //Debug.DrawRay(transform.position , Hit.point, rayColor);
+    }
+    public void isTouchingLEFT(){
+        Color rayColor;
+        RaycastHit2D dist = Physics2D.Raycast(bx2d.bounds.center, Vector2.left);
+        RaycastHit2D leftUP = Physics2D.Raycast(bx2d.bounds.center + new Vector3(-bx2d.bounds.size.x/2, +bx2d.bounds.size.y/2, 0f), Vector2.left, 0.025f);
+        RaycastHit2D leftDOWN = Physics2D.Raycast(bx2d.bounds.center + new Vector3(-bx2d.bounds.size.x/2, -bx2d.bounds.size.y/2, 0f), Vector2.left, 0.025f);
+        if (leftUP.collider != null || leftDOWN.collider != null ){
+            isTouchingLeft = true;
+            rayColor = Color.red;
+            Debug.DrawRay(bx2d.bounds.center  + new Vector3(-bx2d.bounds.size.x/2,+bx2d.bounds.size.y/2, 0f), Vector2.left*5.0f, rayColor);
+            Debug.DrawRay(bx2d.bounds.center  + new Vector3(-bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), Vector2.left*5.0f, rayColor);
+        }
+        else{
+            isTouchingLeft = false;
+            rayColor = Color.green;
+            Debug.DrawRay(bx2d.bounds.center + new Vector3(-bx2d.bounds.size.x/2, 0f, 0f), Vector2.left*dist.distance, rayColor);
+        }
+    }
+    public void isTouchingRIGHT(){
+        Color rayColor;
+        RaycastHit2D dist = Physics2D.Raycast(bx2d.bounds.center, Vector2.right);
+        RaycastHit2D rightUP = Physics2D.Raycast(bx2d.bounds.center + new Vector3(bx2d.bounds.size.x/2, +bx2d.bounds.size.y/2, 0f), Vector2.right, 0.025f);
+        RaycastHit2D rightDOWN = Physics2D.Raycast(bx2d.bounds.center + new Vector3(bx2d.bounds.size.x/2, -bx2d.bounds.size.y/2,0f), Vector2.right, 0.025f);
+        if (rightUP.collider != null || rightDOWN.collider != null ){
+            isTouchingRight = true;
+            rayColor = Color.red;
+            Debug.DrawRay(bx2d.bounds.center  + new Vector3(bx2d.bounds.size.x/2,+bx2d.bounds.size.y/2, 0f), Vector2.right*5.0f, rayColor);
+            Debug.DrawRay(bx2d.bounds.center  + new Vector3(bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), Vector2.right*5.0f, rayColor);
+        }
+        else{
+            isTouchingRight = false;
+            rayColor = Color.green;
+            Debug.DrawRay(bx2d.bounds.center + new Vector3(bx2d.bounds.size.x/2, 0f, 0f), Vector2.right*dist.distance, rayColor);
+        }
     }
     
 }
