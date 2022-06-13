@@ -7,6 +7,7 @@ public class NewBehaviourScript : MonoBehaviour
     private Rigidbody2D rb2d;
     private BoxCollider2D bx2d;
     private SpriteRenderer sp2d;
+    
     [Range(0, 10f)] [SerializeField] public float moveSpeed = 4f;
     [Range(0, 100f)] [SerializeField] public float jumpForce = 10f;
 
@@ -21,7 +22,7 @@ public class NewBehaviourScript : MonoBehaviour
     public Sprite newSprite2;
     
     [Header("Dashing")]
-    [SerializeField] private float dashingVelocity = 7;
+    [SerializeField] private float dashingVelocity = 10;
     [SerializeField] private float dashingTime = 0.2f;
     
     private Vector2 dashingDir;
@@ -33,27 +34,40 @@ public class NewBehaviourScript : MonoBehaviour
     public bool jumpInput = false;
     public bool midJump = false;
 
-    private float side;
-    private bool wallGrab = false;
-    private bool wallSlide;
+    public float side;
+    public bool wallGrab = false;
+    public bool wallSlide;
     private float slidePower = 1;
+    
     private bool Switch = false;
     public bool isJumping = false; 
+    public bool dashInput;
+    public bool wallInput;
+
+    //public camerascript CameraShake;
+    
+    //private GameObject Camera;
+    //void Awake(){
+    //    CameraShake = GameObject.Find("Main Camera").GetComponent<camerascript>();
+    //}
     void Start()
     {
         rb2d = gameObject.GetComponent<Rigidbody2D>();
         bx2d = gameObject.GetComponent<BoxCollider2D>();
         sp2d = gameObject.GetComponent<SpriteRenderer>();
+        //CameraShake = GameObject.Find("Main Camera").GetComponent<camerascript>();
+        //Camera = GameObject.Find("Main Camera");
+        //CameraShake = Camera.GetComponent(Camerascript);
 
     }
 
     void Update()
     {
         
-        var dashInput = Input.GetButtonDown("Dash");
+        dashInput = Input.GetButtonDown("Dash");
         moveHorizontal = Input.GetAxisRaw("Horizontal"); 
         moveVertical = Input.GetAxisRaw("Vertical");
-        var wallInput = Input.GetButton("Grab");
+        wallInput = Input.GetButton("Grab");
         if (Input.GetKey("z")){
             if (!Switch){
                 jumpInput = true;
@@ -106,6 +120,7 @@ public class NewBehaviourScript : MonoBehaviour
 
             }
         }
+        WallClimb();
         if (!isJumping && !jumpInput){
             if (isTouchingLeft && moveHorizontal >= 0){
                 rb2d.velocity = new Vector2(rb2d.velocity.x, jumpForce);
@@ -144,6 +159,9 @@ public class NewBehaviourScript : MonoBehaviour
         }
     
         if (isDashing){
+            
+            //CameraShake = camerascript.instance;
+            //CameraShake.Shake(dashingTime, 0.025f);
             rb2d.velocity = dashingDir.normalized * dashingVelocity;
             sp2d.sprite = newSprite2;
             //return;
@@ -158,29 +176,6 @@ public class NewBehaviourScript : MonoBehaviour
             canDash = true;
         }
 
-       // if ((isTouchingLeft || isTouchingRight) && wallInput){
-       ///     wallGrab = true;
-       //     wallSlide = false;
-       // }
-       // if ((!isTouchingLeft && !isTouchingRight) || Input.GetButtonUp("Grab")){
-       //     wallGrab = false;
-       //     wallSlide = false;
-       // }
-        //if (wallGrab){
-        //    rb2d.gravityScale = 0f;
-        //    rb2d.velocity = new Vector2(rb2d.velocity.x, 0f);
-        //    float speedModifier = moveVertical > 0? 0.35f : 1;
-        //    rb2d.velocity = new Vector2(rb2d.velocity.x, moveVertical * (moveSpeed * speedModifier));
-         //}
-        //else{
-        ///    rb2d.gravityScale = 2.35f;
-       // }
-        //if ((isTouchingLeft || isTouchingRight) && !isFloored){
-            //if (!wallGrab){
-                //wallSlide = true;
-                //WallSlide();
-           // }
-        //}
 
         
         
@@ -195,6 +190,31 @@ public class NewBehaviourScript : MonoBehaviour
         isTouchingRIGHT();
         
         
+    }
+    public void WallClimb(){
+        if ((isTouchingLeft || isTouchingRight) && wallInput){
+            wallGrab = true;
+            wallSlide = false;
+        }
+        if ((!isTouchingLeft && !isTouchingRight) || Input.GetButtonUp("Grab")){
+            wallGrab = false;
+            wallSlide = false;
+        }
+        if (wallGrab){
+            rb2d.gravityScale = 0f;
+            rb2d.velocity = new Vector2(rb2d.velocity.x, 0f);
+            float speedModifier = moveVertical > 0? 0.35f : 1;
+            rb2d.velocity = new Vector2(rb2d.velocity.x, moveVertical * (moveSpeed * speedModifier));
+         }
+        else{
+            rb2d.gravityScale = 2.35f;
+        }
+       // if ((isTouchingLeft || isTouchingRight) && !isFloored && !isJumping){
+        //    if (!wallGrab){
+         //       wallSlide = true;
+         //       WallSlide();
+        //    }
+        //}
     }
     public void WallSlide(){
         bool pushingWall = false;
