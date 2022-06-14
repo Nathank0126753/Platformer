@@ -47,6 +47,10 @@ public class NewBehaviourScript : MonoBehaviour
 
     public bool hasTouchedEnder = false;
     private bool hasEntered;
+
+    private AudioSource AS;
+    private bool Play = true;
+    bool ToggleChange;
     //private float cantMove = 0;
     //public camerascript CameraShake;
     
@@ -59,6 +63,7 @@ public class NewBehaviourScript : MonoBehaviour
         rb2d = gameObject.GetComponent<Rigidbody2D>();
         bx2d = gameObject.GetComponent<BoxCollider2D>();
         sp2d = gameObject.GetComponent<SpriteRenderer>();
+        AS = GetComponent<AudioSource>();
         //CameraShake = GameObject.Find("Main Camera").GetComponent<camerascript>();
         //Camera = GameObject.Find("Main Camera");
         //CameraShake = Camera.GetComponent(Camerascript);
@@ -87,6 +92,7 @@ public class NewBehaviourScript : MonoBehaviour
     void Update()
     {
         //if (cantMove == SceneManager.GetActiveScene().buildIndex){
+        playAudio();    
         isGrounded();
         isTouchingLEFT();
         isTouchingRIGHT();
@@ -175,6 +181,7 @@ public class NewBehaviourScript : MonoBehaviour
         }
         if (dashInput && canDash){
             isDashing = true;
+            
             canDash = false;
             dashingDir = new Vector2(moveHorizontal, moveVertical);
 
@@ -193,17 +200,18 @@ public class NewBehaviourScript : MonoBehaviour
             
             //CameraShake = camerascript.instance;
             //CameraShake.Shake(dashingTime, 0.025f);
-            rb2d.velocity = dashingDir.normalized * dashingVelocity;
             
-            //sp2d.sprite = newSprite2;
+            rb2d.velocity = dashingDir.normalized * dashingVelocity;
+            //animator.SetBool("isDashing", true);
+            sp2d.sprite = newSprite2;
             
             //return;
         }
+        else if (!isDashing){
+            sp2d.sprite = newSprite1;
+        }
         if (isFloored){
             canDash = true;
-        }
-        if (!isDashing){
-            //sp2d.sprite = newSprite1;
         }
         if (isFloored){
             canDash = true;
@@ -216,11 +224,29 @@ public class NewBehaviourScript : MonoBehaviour
     private IEnumerator StopDashing(){
         yield return new WaitForSeconds(dashingTime);
         isDashing = false;
+        //animator.SetBool("isDashing", false);
     }
     void FixedUpdate(){
         
         
         
+    }
+    public void playAudio(){
+        if (Play && ToggleChange)
+        {
+            //Play the audio you attach to the AudioSource component
+            AS.Play();
+            //Ensure audio doesn’t play more than once
+            ToggleChange = false;
+        }
+        //Check if you just set the toggle to false
+        if (!Play && ToggleChange)
+        {
+            //Stop the audio
+            AS.Stop();
+            //Ensure audio doesn’t play more than once
+            ToggleChange = false;
+        }
     }
     public void WallClimb(){
         if ((isTouchingLeft || isTouchingRight) && wallInput){
@@ -274,7 +300,7 @@ public class NewBehaviourScript : MonoBehaviour
                 jumpInput = false;
                 Switch = true;
                 isJumping = false;
-                //sp2d.sprite = newSprite1;
+                sp2d.sprite = newSprite1;
             }
             midJump = false;
             isFloored = true;
