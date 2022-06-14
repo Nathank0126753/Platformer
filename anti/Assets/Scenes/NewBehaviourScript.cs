@@ -1,13 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using UnityEngine.SceneManagement;
 public class NewBehaviourScript : MonoBehaviour
 {
     private Rigidbody2D rb2d;
     private BoxCollider2D bx2d;
     private SpriteRenderer sp2d;
-    
+    public Animator animator;
+
     [Range(0, 10f)] [SerializeField] public float moveSpeed = 4f;
     [Range(0, 100f)] [SerializeField] public float jumpForce = 10f;
 
@@ -44,6 +45,9 @@ public class NewBehaviourScript : MonoBehaviour
     public bool dashInput;
     public bool wallInput;
 
+    public bool hasTouchedEnder = false;
+    private bool hasEntered;
+    //private float cantMove = 0;
     //public camerascript CameraShake;
     
     //private GameObject Camera;
@@ -60,10 +64,32 @@ public class NewBehaviourScript : MonoBehaviour
         //CameraShake = Camera.GetComponent(Camerascript);
 
     }
-
+    void OnTriggerEnter2D(Collider2D other) {
+         if (other.tag == "Ender") {
+             //hasTouchedEnder = true;
+            // transform.Translate(new Vector3(+14f, -3f, 0f));
+             
+             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex+1);
+             //cantMove ++;
+         }
+         if (other.tag == "spikes"){
+             //Destroy(gameObject);
+             //LevelManager.instance.Respawn();
+             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+         }
+     }
+     
+     void OnTriggerExit2D(Collider2D other) {
+         if (other.tag == "Ender") {
+             hasTouchedEnder = false;
+         }
+     }
     void Update()
     {
-        
+        //if (cantMove == SceneManager.GetActiveScene().buildIndex){
+        isGrounded();
+        isTouchingLEFT();
+        isTouchingRIGHT();
         dashInput = Input.GetButtonDown("Dash");
         moveHorizontal = Input.GetAxisRaw("Horizontal"); 
         moveVertical = Input.GetAxisRaw("Vertical");
@@ -82,17 +108,22 @@ public class NewBehaviourScript : MonoBehaviour
         if (Mathf.Abs(moveHorizontal) > 0.1f)
          {
 
-             sp2d.flipX = moveHorizontal > 0f ? true : false;
+             sp2d.flipX = moveHorizontal > 0f ? false : true;
          }
-        
+        animator.SetFloat("movespeed", Mathf.Abs(moveHorizontal));
+
         if (!wallGrab){
             if (moveHorizontal >= 0f){
                     if (!isTouchingRight){
                         rb2d.velocity = new Vector2(moveHorizontal * moveSpeed, rb2d.velocity.y);  
-                        if (moveHorizontal > 0f)
-                            m_FacingRight = true;   
+                        if (moveHorizontal > 0f){
+                            m_FacingRight = true;
+                            
+                        }
+                        
+
                     }   
-                    else if (isTouchingRight && !isFloored && !midJump && moveHorizontal > 0f){
+                    else if (isTouchingRight && !isFloored && !midJump && moveHorizontal > 0f  && rb2d.velocity.y != 0){
                         rb2d.velocity = new Vector2(0f, rb2d.velocity.y-rb2d.velocity.y/10); 
                         m_FacingRight = true;
                     } 
@@ -109,7 +140,7 @@ public class NewBehaviourScript : MonoBehaviour
                     if (moveHorizontal < 0f)
                         m_FacingRight = false;
                 }
-                else if (isTouchingLeft && !isFloored && !midJump && moveHorizontal < 0f){
+                else if (isTouchingLeft && !isFloored && !midJump && moveHorizontal < 0f && rb2d.velocity.y != 0){
                     rb2d.velocity = new Vector2(0f, rb2d.velocity.y-rb2d.velocity.y/10); 
                     m_FacingRight = false;
                 }
@@ -163,14 +194,16 @@ public class NewBehaviourScript : MonoBehaviour
             //CameraShake = camerascript.instance;
             //CameraShake.Shake(dashingTime, 0.025f);
             rb2d.velocity = dashingDir.normalized * dashingVelocity;
-            sp2d.sprite = newSprite2;
+            
+            //sp2d.sprite = newSprite2;
+            
             //return;
         }
         if (isFloored){
             canDash = true;
         }
         if (!isDashing){
-            sp2d.sprite = newSprite1;
+            //sp2d.sprite = newSprite1;
         }
         if (isFloored){
             canDash = true;
@@ -178,16 +211,14 @@ public class NewBehaviourScript : MonoBehaviour
 
 
         
-        
+        //}   
     }
     private IEnumerator StopDashing(){
         yield return new WaitForSeconds(dashingTime);
         isDashing = false;
     }
     void FixedUpdate(){
-        isGrounded();
-        isTouchingLEFT();
-        isTouchingRIGHT();
+        
         
         
     }
@@ -227,38 +258,39 @@ public class NewBehaviourScript : MonoBehaviour
     
 
     public void isGrounded(){
-        Color rayColor;
+        //Color rayColor;
         RaycastHit2D dist = Physics2D.Raycast(bx2d.bounds.center, -Vector2.up);
         RaycastHit2D Hit1 = Physics2D.Raycast(bx2d.bounds.center + new Vector3(-bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), -Vector2.up, 0.5f);
         RaycastHit2D Hit2 = Physics2D.Raycast(bx2d.bounds.center + new Vector3(-0f,-bx2d.bounds.size.y/2, 0f), -Vector2.up, 0.5f);
         RaycastHit2D Hit3 = Physics2D.Raycast(bx2d.bounds.center + new Vector3(+bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), -Vector2.up, 0.5f);
 
-        if ((Hit1.collider != null || Hit2.collider != null || Hit3.collider != null)  && rb2d.velocity.y == 0){ 
-            rayColor = Color.green;
+        if ((Hit1.collider != null || Hit2.collider != null || Hit3.collider != null)  && rb2d.velocity.y == 0){  //this velocity changes when left/right movement
+            //rayColor = Color.green;
             //comment out the Debug.DrawRay to remove the weird lines
-            Debug.DrawRay(bx2d.bounds.center  + new Vector3(-bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), -Vector2.up*5.0f, rayColor);
-            Debug.DrawRay(bx2d.bounds.center  + new Vector3(0f,-bx2d.bounds.size.y/2, 0f), -Vector2.up*5.0f, rayColor);
-            Debug.DrawRay(bx2d.bounds.center  + new Vector3(bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), -Vector2.up*5.0f, rayColor);
+            //Debug.DrawRay(bx2d.bounds.center  + new Vector3(-bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), -Vector2.up*5.0f, rayColor);
+           // Debug.DrawRay(bx2d.bounds.center  + new Vector3(0f,-bx2d.bounds.size.y/2, 0f), -Vector2.up*5.0f, rayColor);
+           // Debug.DrawRay(bx2d.bounds.center  + new Vector3(bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), -Vector2.up*5.0f, rayColor);
             if (jumpInput){
                 jumpInput = false;
                 Switch = true;
                 isJumping = false;
-                sp2d.sprite = newSprite1;
+                //sp2d.sprite = newSprite1;
             }
             midJump = false;
             isFloored = true;
         }
         else{
             isJumping = true;
+            
             isFloored = false;
-            rayColor = Color.red;
+            //rayColor = Color.red;
             //comment out the Debug.DrawRay to remove the weird lines
-            Debug.DrawRay(bx2d.bounds.center + new Vector3(0f, -bx2d.bounds.size.y/2, 0f), -Vector2.up*dist.distance, rayColor); 
+           // Debug.DrawRay(bx2d.bounds.center + new Vector3(0f, -bx2d.bounds.size.y/2, 0f), -Vector2.up*dist.distance, rayColor); 
             
         }
     }
     public void isTouchingLEFT(){
-        Color rayColor;
+        //Color rayColor;
         RaycastHit2D dist = Physics2D.Raycast(bx2d.bounds.center, Vector2.left);
         RaycastHit2D leftUP = Physics2D.Raycast(bx2d.bounds.center + new Vector3(-bx2d.bounds.size.x/2, +bx2d.bounds.size.y/2, 0f), Vector2.left, 0.025f);
         RaycastHit2D leftDOWN = Physics2D.Raycast(bx2d.bounds.center + new Vector3(-bx2d.bounds.size.x/2, -bx2d.bounds.size.y/2-0.01f, 0f), Vector2.left, 0.025f);
@@ -271,20 +303,20 @@ public class NewBehaviourScript : MonoBehaviour
             
             midJump = false;
             isTouchingLeft = true;
-            rayColor = Color.red;
+            //rayColor = Color.red;
             //comment out the Debug.DrawRay to remove the weird lines
-            Debug.DrawRay(bx2d.bounds.center  + new Vector3(-bx2d.bounds.size.x/2,+bx2d.bounds.size.y/2, 0f), Vector2.left*5.0f, rayColor);
-            Debug.DrawRay(bx2d.bounds.center  + new Vector3(-bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), Vector2.left*5.0f, rayColor);
+            //Debug.DrawRay(bx2d.bounds.center  + new Vector3(-bx2d.bounds.size.x/2,+bx2d.bounds.size.y/2, 0f), Vector2.left*5.0f, rayColor);
+            //Debug.DrawRay(bx2d.bounds.center  + new Vector3(-bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), Vector2.left*5.0f, rayColor);
         }
         else{
             isTouchingLeft = false;
-            rayColor = Color.green;
+            //rayColor = Color.green;
             //comment out the Debug.DrawRay to remove the weird lines
-            Debug.DrawRay(bx2d.bounds.center + new Vector3(-bx2d.bounds.size.x/2, 0f, 0f), Vector2.left*dist.distance, rayColor);
+            //Debug.DrawRay(bx2d.bounds.center + new Vector3(-bx2d.bounds.size.x/2, 0f, 0f), Vector2.left*dist.distance, rayColor);
         }
     }
     public void isTouchingRIGHT(){
-        Color rayColor;
+        //Color rayColor;
         RaycastHit2D dist = Physics2D.Raycast(bx2d.bounds.center, Vector2.right);
         RaycastHit2D rightUP = Physics2D.Raycast(bx2d.bounds.center + new Vector3(bx2d.bounds.size.x/2, +bx2d.bounds.size.y/2, 0f), Vector2.right, 0.025f);
         RaycastHit2D rightDOWN = Physics2D.Raycast(bx2d.bounds.center + new Vector3(bx2d.bounds.size.x/2, -bx2d.bounds.size.y/2-0.01f,0f), Vector2.right, 0.025f);
@@ -296,16 +328,16 @@ public class NewBehaviourScript : MonoBehaviour
             }
             midJump = false;
             isTouchingRight = true;
-            rayColor = Color.red;
+           // rayColor = Color.red;
             //comment out the Debug.DrawRay to remove the weird lines
-            Debug.DrawRay(bx2d.bounds.center  + new Vector3(bx2d.bounds.size.x/2,+bx2d.bounds.size.y/2, 0f), Vector2.right*5.0f, rayColor);
-            Debug.DrawRay(bx2d.bounds.center  + new Vector3(bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), Vector2.right*5.0f, rayColor);
+            //Debug.DrawRay(bx2d.bounds.center  + new Vector3(bx2d.bounds.size.x/2,+bx2d.bounds.size.y/2, 0f), Vector2.right*5.0f, rayColor);
+            //Debug.DrawRay(bx2d.bounds.center  + new Vector3(bx2d.bounds.size.x/2,-bx2d.bounds.size.y/2, 0f), Vector2.right*5.0f, rayColor);
         }
         else{
             isTouchingRight = false;
-            rayColor = Color.green;
+            //rayColor = Color.green;
             //comment out the Debug.DrawRay to remove the weird lines
-            Debug.DrawRay(bx2d.bounds.center + new Vector3(bx2d.bounds.size.x/2, 0f, 0f), Vector2.right*dist.distance, rayColor);
+            //Debug.DrawRay(bx2d.bounds.center + new Vector3(bx2d.bounds.size.x/2, 0f, 0f), Vector2.right*dist.distance, rayColor);
         }
     }
     
